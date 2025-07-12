@@ -1,39 +1,39 @@
-
 import streamlit as st
 import pdfplumber
 import re
 
-st.title("Roofing Scope Calculator from Insurance PDF")
+st.set_page_config(page_title="Roofing Scope Calculator", layout="centered")
 
-uploaded_file = st.file_uploader("Upload Insurance Scope (PDF)", type=["pdf"])
+st.title("📄 Roofing Scope Line Item Calculator")
 
-line_items = []
-total = 0
+uploaded_file = st.file_uploader("Upload Insurance Scope PDF", type="pdf")
 
 if uploaded_file:
     with pdfplumber.open(uploaded_file) as pdf:
+        text = ""
         for page in pdf.pages:
-            text = page.extract_text()
-            if not text:
-                continue
-            lines = text.split('\n')
-            for line in lines:
-                # Simple match for scope-style lines (e.g., quantity + unit + RCV)
-                match = re.search(r"(\d+\.\d+)(SQ|LF|EA)\s+[\d.]+\s+[\d.]+\s+([\d,]+\.\d+)", line)
-                if match:
-                    qty = match.group(1)
-                    unit = match.group(2)
-                    rcv = float(match.group(3).replace(',', ''))
-                    label = f"{qty} {unit} — ${rcv:,.2f}"
-                    line_items.append((label, rcv))
+            text += page.extract_text()
 
-    st.subheader("Select Completed Line Items")
-    for label, rcv in line_items:
+    # Extract line items with quantity, unit, and RCV
+    line_pattern = r"(\d+\.\d{2})\s+(EA|LF|SQ|SF|SY)\s+\—\s+\$(\d{1,6}\.\d{2})"
+    matches = re.findall(line_pattern, text)
+
+    if not matches:
+        st.warning("No line items found in PDF.")
+    else:
+        st.subheader("Select Completed Line Items")
+
+        line_items = []
+        for qty, unit, price in matches:
+            label = f"{qty} {unit} — ${price}"
+            rcv = float(price)
+            line_items.append((label, rcv))
+
+        total = 0
         for i, (label, rcv) in enumerate(line_items):
-    checkbox_key = f"line_{i}_{hash(label)}"
-    if st.checkbox(label, key=checkbox_key):
-        total += rcv
+            checkbox_key = f"line_{i}_{hash(label)}"
+            if st.checkbox(label, key=checkbox_key):
+                total += rcv
 
-    st.markdown(f"### Total Selected RCV: **${total:,.2f}**")
-else:
-    st.info("Upload a PDF to begin.")
+        st.markdown("---")
+        st.metric("Total RCV of Selected Items", f"${total:,.2f}")
