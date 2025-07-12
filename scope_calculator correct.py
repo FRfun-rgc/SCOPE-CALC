@@ -29,8 +29,10 @@ if uploaded_file:
 
     st.subheader("Select Completed Line Items")
     for label, rcv in line_items:
-        if st.checkbox(label):
-            total += rcv
+        for i, (label, rcv) in enumerate(line_items):
+    checkbox_key = f"line_{i}_{hash(label)}"
+    if st.checkbox(label, key=checkbox_key):
+        total += rcv
 
     st.markdown(f"### Total Selected RCV: **${total:,.2f}**")
 else:
